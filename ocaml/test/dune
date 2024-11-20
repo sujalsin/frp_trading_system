@@ -1,0 +1,11 @@
+(tests
+ (names test_frp test_execution)
+ (libraries
+  core
+  async
+  frp_trading
+  core_unix.time_unix
+  ounit2
+  frp_trading_system)
+ (preprocess
+  (pps ppx_jane)))

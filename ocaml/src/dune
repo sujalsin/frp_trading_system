@@ -1,0 +1,17 @@
+(library
+ (name frp_trading)
+ (public_name frp_trading)
+ (libraries
+  core
+  async
+  ctypes
+  ctypes.foreign
+  unix)
+ (preprocess
+  (pps ppx_jane))
+ (foreign_stubs
+  (language cxx)
+  (names bindings)
+  (flags -std=c++20))
+ (c_library_flags
+  (-lstdc++)))

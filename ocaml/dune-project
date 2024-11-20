@@ -1,0 +1,23 @@
+(lang dune 2.9)
+(name frp_trading)
+(version 0.1.0)
+
+(generate_opam_files true)
+
+(source (github sujalsin/frp_trading))
+(license MIT)
+(authors "Sujal Singh")
+(maintainers "Sujal Singh")
+
+(package
+ (name frp_trading)
+ (synopsis "FRP-based Trading System")
+ (description "A high-performance automated trading system using Functional Reactive Programming principles")
+ (depends
+  (ocaml (>= 4.13.0))
+  dune
+  core
+  async
+  ppx_jane
+  ctypes
+  (alcotest :with-test)))
