@@ -15,111 +15,97 @@ namespace Color {
     const char* Yellow  = "\033[33m";
     const char* Blue    = "\033[34m";
     const char* Magenta = "\033[35m";
-    const char* Cyan    = "\033[36m";
 }
 
-class OrderBookVisualizer {
-public:
-    static void displayMarketData(const trading::MarketData& data) {
-        std::cout << Color::Blue << "[Market Data] " << Color::Reset
-                  << data.symbol << " @ $" << std::fixed << std::setprecision(2) 
-                  << data.price << " (Vol: " << data.volume << ") "
-                  << data.timestamp << std::endl;
-    }
-
-    static void displayTrade(const trading::Trade& trade) {
-        std::cout << Color::Green << "[Trade] " << Color::Reset
-                  << trade.symbol << " - Order " << trade.order_id 
-                  << " @ $" << std::fixed << std::setprecision(2) << trade.price
-                  << " x " << trade.quantity << " " << trade.timestamp << std::endl;
-    }
-
-    static void displayPosition(const std::string& symbol, const trading::ExecutionEngine& engine) {
-        std::cout << Color::Yellow << "[Position] " << Color::Reset
-                  << symbol << ": " << engine.get_position(symbol)
-                  << " @ $" << std::fixed << std::setprecision(2) << engine.get_average_price(symbol)
-                  << " P&L: $" << engine.get_realized_pnl(symbol)
-                  << " (Unrealized: $" << engine.get_unrealized_pnl(symbol) << ")"
-                  << std::endl;
-    }
-
-    static void displayOrderBook(const std::string& symbol, const trading::ExecutionEngine& engine) {
-        std::cout << Color::Magenta << "[OrderBook] " << Color::Reset
-                  << symbol << " - Best Bid: $" << std::fixed << std::setprecision(2)
-                  << "TODO" // TODO: Add best bid/ask display
-                  << " Best Ask: $" << "TODO"
-                  << std::endl;
-    }
-};
+void display_position(const std::string& symbol, const trading::ExecutionEngine& engine) {
+    std::cout << Color::Yellow << "[Position] " << Color::Reset
+              << symbol << ": " << engine.get_position(symbol)
+              << " @ $" << std::fixed << std::setprecision(2) << engine.get_average_price(symbol)
+              << " P&L: $" << engine.get_realized_pnl(symbol) 
+              << " (Unrealized: $" << engine.get_unrealized_pnl(symbol) << ")"
+              << std::endl;
+}
 
 int main() {
     std::cout << "Starting Execution Engine Test...\n" << std::endl;
 
-    // Create and start the execution engine
     trading::ExecutionEngine engine;
+    std::cout << "Created engine\n";
+    
     engine.start();
+    std::cout << "Started engine\n";
 
-    // Test symbols
-    const std::string symbols[] = {"AAPL", "GOOGL", "MSFT"};
+    const std::string symbol = "AAPL";
+    std::cout << "Testing with symbol: " << symbol << std::endl;
 
-    // Subscribe to market data for all symbols
-    for (const auto& symbol : symbols) {
-        engine.subscribe_market_data(symbol, 
-            [](const trading::MarketData& data) {
-                OrderBookVisualizer::displayMarketData(data);
-            }
-        );
-
-        engine.subscribe_trades(symbol,
-            [](const trading::Trade& trade) {
-                OrderBookVisualizer::displayTrade(trade);
-            }
-        );
-    }
-
-    // Function to submit random orders
-    auto submit_random_orders = [&](const std::string& symbol) {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<> price_dist(90.0, 110.0);
-        std::uniform_int_distribution<> qty_dist(1, 100);
-        std::uniform_int_distribution<> side_dist(0, 1);
-
-        for (int i = 0; i < 5; ++i) {
-            trading::Order order{
-                "", // order_id will be generated
-                symbol,
-                price_dist(gen),
-                qty_dist(gen),
-                side_dist(gen) == 0
-            };
-
-            engine.submit_order(order);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // Subscribe to market data and trades
+    engine.subscribe_market_data(symbol, 
+        [](const trading::MarketData& data) {
+            std::cout << Color::Blue << "[Market] " << Color::Reset
+                      << data.symbol << " @ $" << std::fixed << std::setprecision(2) 
+                      << data.price << std::endl;
         }
+    );
+
+    engine.subscribe_trades(symbol,
+        [](const trading::Trade& trade) {
+            std::cout << Color::Green << "[Trade] " << Color::Reset
+                      << trade.symbol << " @ $" << std::fixed << std::setprecision(2) 
+                      << trade.price << " x " << trade.quantity << std::endl;
+        }
+    );
+
+    std::cout << "\nStarting Position:\n";
+    display_position(symbol, engine);
+
+    // First trade: Buy 100 shares at $100
+    std::cout << "\nSubmitting buy order (100 shares @ $100.00)...\n";
+    trading::Order buy_order{
+        "", 
+        symbol,
+        100.0,
+        100,
+        true
     };
+    engine.submit_order(buy_order);
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << "\nPosition after buy:\n";
+    display_position(symbol, engine);
 
-    // Submit orders for each symbol
-    std::cout << "\nSubmitting orders...\n" << std::endl;
-    for (const auto& symbol : symbols) {
-        submit_random_orders(symbol);
-        OrderBookVisualizer::displayPosition(symbol, engine);
-        OrderBookVisualizer::displayOrderBook(symbol, engine);
-        std::cout << std::endl;
-    }
+    // Second trade: Sell 50 shares at $105
+    std::cout << "\nSubmitting sell order (50 shares @ $105.00)...\n";
+    trading::Order sell_order1{
+        "",
+        symbol,
+        105.0,
+        50,
+        false
+    };
+    engine.submit_order(sell_order1);
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << "\nPosition after partial sell:\n";
+    display_position(symbol, engine);
 
-    // Let the market data and trades process
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    // Third trade: Sell remaining 50 shares at $110
+    std::cout << "\nSubmitting sell order (50 shares @ $110.00)...\n";
+    trading::Order sell_order2{
+        "",
+        symbol,
+        110.0,
+        50,
+        false
+    };
+    engine.submit_order(sell_order2);
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << "\nFinal Position:\n";
+    display_position(symbol, engine);
 
-    // Display final positions
-    std::cout << "\nFinal Positions:\n" << std::endl;
-    for (const auto& symbol : symbols) {
-        OrderBookVisualizer::displayPosition(symbol, engine);
-    }
-
-    // Stop the engine
+    std::cout << "\nStopping engine...\n";
     engine.stop();
-    std::cout << "\nTest completed.\n" << std::endl;
+    std::cout << "Test completed.\n" << std::endl;
 
     return 0;
 }
